@@ -13,11 +13,22 @@
       }
     }
   }
+
   SEED = "" + new Date().getTime();
+  PROFILE = "original";
+
   parseArgs({
     seed: function(x) {
       SEED = x == "" ? SEED : x;
     },
+    profile: function(x) {
+      PROFILE = x == "" ? PROFILE : x;
+    },
   });
+
+  ACTIVE_PROFILE = SceneProfiles.activate(PROFILE);
+  PROFILE = ACTIVE_PROFILE.id;
+
   Math.seed(SEED);
+  console.log(["scene profile", PROFILE]);
   console.log(Prng.seed);
