@@ -1,42 +1,45 @@
 # {Shan, Shui}*
 
-Procedurally-generated vector-format infinitely-scrolling Chinese landscape for the browser.
+Procedurally-generated vector-format infinitely-scrolling landscape for the browser.
 
-Generate the original project on https://lingdong-.github.io/shan-shui-inf/ (or the [alternative link](https://shan-shui-inf.glitch.me)).
-
-Some examples:
-
-![Screenshot1](/screenshots/screen001.jpg?raw=true "")
-![Screenshot2](/screenshots/screen002.jpg?raw=true "")
-
-{Shan, Shui}\* is inspired by [traditional Chinese landscape scrolls](https://en.wikipedia.org/wiki/Shan_shui) (such as [this](https://en.wikipedia.org/wiki/Dwelling_in_the_Fuchun_Mountains) and [this](https://en.wikipedia.org/wiki/Wang_Ximeng)) and uses noise and mathematical functions to model mountains and trees from scratch. It is written entirely in JavaScript and outputs Scalable Vector Graphics (SVG).
-
-## This fork
-
-This fork is being prepared for regional scene profiles, beginning with Norwegian terrain, vegetation, architecture, and settlements. The original visual behavior remains the default reference.
-
-## Project structure
-
-- `index.html` contains the document structure and preserves synchronous script order.
-- `src/scripts/` contains random generation, noise, geometry, controls, and startup code.
-- `src/scripts/generator/` separates drawing primitives, trees, mountains, architecture, people, water, world planning, and runtime rendering.
-- `docs/architecture.md` describes the dependency direction and compatibility constraints.
-- `scripts/verify-refactor.mjs` checks references, duplicate entries, load-order documentation, and JavaScript syntax.
-
-The generator still uses classic browser globals intentionally. Script order affects seeded output because the project replaces `Math.random` with its deterministic generator.
+This fork keeps the original generator as the visual reference while preparing the codebase for regional scene profiles, beginning with Norway.
 
 ## Run locally
 
-Serve the repository as static files and open it in a browser:
+The extracted scripts are loaded as ordinary browser files, so serve the repository through a small local HTTP server rather than opening `index.html` directly:
 
 ```bash
-python -m http.server 8000
+python3 -m http.server 8000
 ```
 
 Then open `http://localhost:8000`.
 
-Run the structural verification with:
+Use a deterministic seed with:
+
+```text
+http://localhost:8000/?seed=mo-i-rana
+```
+
+## Validate the refactor
 
 ```bash
 node scripts/verify-refactor.mjs
 ```
+
+The check verifies that all external scripts exist, remain in documented order, contain valid JavaScript syntax, and that no executable inline scripts have returned to `index.html`.
+
+The browser regression report is available in [`docs/refactor-browser-test.md`](docs/refactor-browser-test.md). It compares the original and refactored generator byte for byte across fixed seeds and scrolling.
+
+## Architecture
+
+See [`docs/architecture.md`](docs/architecture.md) and [`src/scripts/README.md`](src/scripts/README.md).
+
+## Original project
+
+The original project was created by Lingdong Huang and is inspired by traditional Chinese landscape scrolls. It models mountains and trees from noise and mathematical functions, is written in JavaScript, and outputs SVG.
+
+Original repository: `LingDong-/shan-shui-inf`
+
+## License
+
+MIT. Keep the original copyright and license notice when redistributing substantial portions of the software.
