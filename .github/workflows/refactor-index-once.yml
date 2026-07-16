@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  split-index:
+  split-generator:
     runs-on: ubuntu-latest
     steps:
       - name: Check out refactor branch
@@ -19,8 +19,8 @@ jobs:
         with:
           ref: agent/refactor-index-structure
 
-      - name: Split inline scripts
-        run: node scripts/split-index.mjs
+      - name: Split generator domains
+        run: node scripts/split-generator.mjs
 
       - name: Verify generated structure
         run: node scripts/verify-refactor.mjs
@@ -29,7 +29,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html src/scripts docs/architecture.md
+          git add -A
           git diff --cached --stat
-          git commit -m "Split index into ordered scripts"
+          git commit -m "Split generator into focused modules"
           git push origin HEAD:agent/refactor-index-structure
