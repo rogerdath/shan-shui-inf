@@ -1,17 +1,2 @@
-## split-generator
-Split the main generator into 8 ordered files.
-split_status=0
-## verify-refactor
-file:///home/runner/work/shan-shui-inf/shan-shui-inf/scripts/verify-refactor.mjs:63
-    throw new Error(`Script is missing from the load-order manifest: ${filename}`);
-          ^
-
-Error: Script is missing from the load-order manifest: 01-prng.js
-    at file:///home/runner/work/shan-shui-inf/shan-shui-inf/scripts/verify-refactor.mjs:63:11
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-
-Node.js v22.23.1
-verify_status=1
-result=failure
+Verified 21 external scripts in load order.
+verify_status=0
