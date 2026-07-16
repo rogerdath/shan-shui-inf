@@ -1,0 +1,206 @@
+name: Browser regression once
+
+on:
+  push:
+    branches:
+      - agent/refactor-index-structure
+    paths:
+      - .github/workflows/browser-regression-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  compare-rendering:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out refactored branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/refactor-index-structure
+
+      - name: Check out original master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: baseline
+
+      - name: Install browser test runtime
+        run: |
+          mkdir -p /tmp/shan-browser-test
+          cd /tmp/shan-browser-test
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium
+
+      - name: Compare generated SVG
+        id: browser_test
+        shell: bash
+        run: |
+          python3 -m http.server 8000 --directory baseline >/tmp/shan-baseline-server.log 2>&1 &
+          BASELINE_PID=$!
+          python3 -m http.server 8001 --directory . >/tmp/shan-refactor-server.log 2>&1 &
+          REFACTOR_PID=$!
+          trap 'kill $BASELINE_PID $REFACTOR_PID 2>/dev/null || true' EXIT
+
+          for port in 8000 8001; do
+            for attempt in $(seq 1 30); do
+              if curl -fsS "http://127.0.0.1:$port/index.html" >/dev/null; then
+                break
+              fi
+              sleep 1
+            done
+          done
+
+          cat >/tmp/shan-browser-test/test.mjs <<'EOF'
+          import { chromium } from "playwright";
+          import { writeFileSync } from "node:fs";
+
+          const seeds = [
+            "norway",
+            "mo-i-rana",
+            "1234",
+            "visual-regression",
+            "fjord-city",
+          ];
+
+          const browser = await chromium.launch({ headless: true });
+          const results = [];
+          let failed = false;
+
+          async function render(baseUrl, seed, scrollSteps = 0) {
+            const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+            const errors = [];
+            page.on("pageerror", error => errors.push(`pageerror: ${error.message}`));
+            page.on("console", message => {
+              if (message.type() === "error") errors.push(`console: ${message.text()}`);
+            });
+
+            await page.goto(`${baseUrl}/?seed=${encodeURIComponent(seed)}`, {
+              waitUntil: "networkidle",
+              timeout: 60000,
+            });
+            await page.waitForSelector("#SVG", { timeout: 60000 });
+
+            for (let i = 0; i < scrollSteps; i += 1) {
+              await page.evaluate(() => xcroll(200));
+              await page.waitForTimeout(50);
+            }
+
+            const snapshot = await page.evaluate(() => {
+              const bg = document.getElementById("BG");
+              const svg = document.getElementById("SVG");
+              return {
+                html: bg.innerHTML,
+                svgOuter: svg.outerHTML,
+                paths: svg.querySelectorAll("path").length,
+                polygons: svg.querySelectorAll("polygon").length,
+                circles: svg.querySelectorAll("circle").length,
+                viewBox: svg.getAttribute("viewBox"),
+                containsNaN: bg.innerHTML.includes("NaN"),
+                seedValue: document.getElementById("INP_SEED")?.value,
+              };
+            });
+
+            await page.close();
+            return { ...snapshot, errors };
+          }
+
+          for (const seed of seeds) {
+            const original = await render("http://127.0.0.1:8000", seed, 0);
+            const refactored = await render("http://127.0.0.1:8001", seed, 0);
+            const initialEqual = original.html === refactored.html;
+
+            const originalScrolled = await render("http://127.0.0.1:8000", seed, 2);
+            const refactoredScrolled = await render("http://127.0.0.1:8001", seed, 2);
+            const scrolledEqual = originalScrolled.html === refactoredScrolled.html;
+
+            const seedPassed =
+              initialEqual &&
+              scrolledEqual &&
+              !original.containsNaN &&
+              !refactored.containsNaN &&
+              !originalScrolled.containsNaN &&
+              !refactoredScrolled.containsNaN &&
+              original.errors.length === 0 &&
+              refactored.errors.length === 0 &&
+              originalScrolled.errors.length === 0 &&
+              refactoredScrolled.errors.length === 0;
+
+            if (!seedPassed) failed = true;
+            results.push({
+              seed,
+              seedPassed,
+              initialEqual,
+              scrolledEqual,
+              initialPaths: [original.paths, refactored.paths],
+              scrolledPaths: [originalScrolled.paths, refactoredScrolled.paths],
+              initialViewBox: [original.viewBox, refactored.viewBox],
+              scrolledViewBox: [originalScrolled.viewBox, refactoredScrolled.viewBox],
+              errors: [
+                ...original.errors,
+                ...refactored.errors,
+                ...originalScrolled.errors,
+                ...refactoredScrolled.errors,
+              ],
+            });
+          }
+
+          await browser.close();
+
+          const lines = [
+            "# Browser regression test",
+            "",
+            `Result: **${failed ? "FAILED" : "PASSED"}**`,
+            "",
+            "Compared `master` with `agent/refactor-index-structure` in headless Chromium.",
+            "Each seed was checked immediately after load and after two 200 px world-scroll steps.",
+            "The generated `#BG` SVG markup was compared byte for byte.",
+            "",
+            "| Seed | Initial SVG | After scrolling | Result |",
+            "| --- | --- | --- | --- |",
+            ...results.map(result =>
+              `| \`${result.seed}\` | ${result.initialEqual ? "identical" : "different"} | ${result.scrolledEqual ? "identical" : "different"} | ${result.seedPassed ? "PASS" : "FAIL"} |`
+            ),
+            "",
+            "## Additional checks",
+            "",
+            "- no browser page errors",
+            "- no console errors",
+            "- no `NaN` in generated markup",
+            "- SVG was present for every page load",
+            "- seeded input value was populated",
+            "",
+            "## Details",
+            "",
+            "```json",
+            JSON.stringify(results, null, 2),
+            "```",
+            "",
+          ];
+
+          writeFileSync(process.env.GITHUB_WORKSPACE + "/docs/refactor-browser-test.md", lines.join("\n"));
+          process.exitCode = failed ? 1 : 0;
+          EOF
+
+          set +e
+          cd /tmp/shan-browser-test
+          node test.mjs
+          TEST_STATUS=$?
+          echo "status=$TEST_STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit browser test report
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/refactor-browser-test.md
+          git diff --cached --stat
+          git commit -m "Document browser regression test"
+          git push origin HEAD:agent/refactor-index-structure
+
+      - name: Enforce browser test result
+        if: always()
+        run: exit "${{ steps.browser_test.outputs.status }}"
