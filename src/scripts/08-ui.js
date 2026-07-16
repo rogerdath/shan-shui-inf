@@ -68,7 +68,13 @@
   }
   function reloadWSeed(s) {
     var u = window.location.href.split("?")[0];
-    window.location.href = u + "?seed=" + s;
+    var profile = SceneProfiles.getActiveId();
+    window.location.href =
+      u +
+      "?seed=" +
+      encodeURIComponent(s) +
+      "&profile=" +
+      encodeURIComponent(profile);
     //window.location.reload(true)
   }
   var btnHoverCol = "rgba(0,0,0,0.1)";
