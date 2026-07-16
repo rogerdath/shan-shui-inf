@@ -19,17 +19,32 @@ jobs:
         with:
           ref: agent/refactor-index-structure
 
-      - name: Split generator domains
-        run: node scripts/split-generator.mjs
+      - name: Run and record generator split
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "## split-generator"
+            node scripts/split-generator.mjs
+            split_status=$?
+            echo "split_status=$split_status"
+            if [ "$split_status" -eq 0 ]; then
+              echo "## verify-refactor"
+              node scripts/verify-refactor.mjs
+              verify_status=$?
+              echo "verify_status=$verify_status"
+            else
+              verify_status=99
+            fi
+            echo "result=$([ "$split_status" -eq 0 ] && [ "$verify_status" -eq 0 ] && echo success || echo failure)"
+          } > refactor-generator.log 2>&1
+          cat refactor-generator.log
 
-      - name: Verify generated structure
-        run: node scripts/verify-refactor.mjs
-
-      - name: Commit generated files
+      - name: Commit result
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --stat
-          git commit -m "Split generator into focused modules"
+          git commit -m "Record generator refactor result"
           git push origin HEAD:agent/refactor-index-structure
