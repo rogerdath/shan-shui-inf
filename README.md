@@ -20,13 +20,23 @@ Use a deterministic seed with:
 http://localhost:8000/?seed=mo-i-rana
 ```
 
-## Validate the refactor
+Select a scene profile with:
+
+```text
+http://localhost:8000/?seed=mo-i-rana&profile=original
+http://localhost:8000/?seed=mo-i-rana&profile=norway
+```
+
+`original` remains the default. The current `norway` profile is a scaffold and deliberately renders with inherited original behavior until Norwegian generators are connected.
+
+## Validate the refactor and profiles
 
 ```bash
 node scripts/verify-refactor.mjs
+node scripts/verify-profiles.mjs
 ```
 
-The check verifies that all external scripts exist, remain in documented order, contain valid JavaScript syntax, and that no executable inline scripts have returned to `index.html`.
+The checks verify script existence and order, JavaScript syntax, absence of executable inline scripts, profile registration, inheritance, immutability, activation, and safe fallback.
 
 The browser regression report is available in [`docs/refactor-browser-test.md`](docs/refactor-browser-test.md). It compares the original and refactored generator byte for byte across fixed seeds and scrolling.
 
