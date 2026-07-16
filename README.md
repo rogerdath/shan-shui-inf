@@ -38,7 +38,10 @@ node scripts/verify-profiles.mjs
 
 The checks verify script existence and order, JavaScript syntax, absence of executable inline scripts, profile registration, inheritance, immutability, activation, and safe fallback.
 
-The browser regression report is available in [`docs/refactor-browser-test.md`](docs/refactor-browser-test.md). It compares the original and refactored generator byte for byte across fixed seeds and scrolling.
+Browser regression reports:
+
+- [`docs/refactor-browser-test.md`](docs/refactor-browser-test.md) compares the original monolith and refactored generator.
+- [`docs/profile-browser-test.md`](docs/profile-browser-test.md) compares merged `master`, `profile=original`, and `profile=norway` across fixed seeds and scrolling.
 
 ## Architecture
 
