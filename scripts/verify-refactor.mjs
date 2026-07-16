@@ -58,9 +58,8 @@ const manifest = readFileSync(
   "utf8",
 );
 for (const source of scriptSources) {
-  const filename = source.split("/").at(-1);
-  if (!manifest.includes(`\`${filename}\``)) {
-    throw new Error(`Script is missing from the load-order manifest: ${filename}`);
+  if (!manifest.includes(`\`${source}\``)) {
+    throw new Error(`Script is missing from the load-order manifest: ${source}`);
   }
 }
 
